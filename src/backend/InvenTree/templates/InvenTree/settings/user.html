@@ -5,7 +5,7 @@
 {% load inventree_extras %}
 {% load socialaccount %}
 {% load crispy_forms_tags %}
-{% load user_sessions i18n %}
+{% load i18n %}
 
 {% block label %}account{% endblock label %}
 
@@ -155,10 +155,6 @@
 
     <div class="col-md-6">
     <h5>{% trans "Change factors" %}</h5>
-    <a href="{% url 'two-factor-setup' %}" class="btn btn-primary {% if user.staticdevice_set.all and user.totpdevice_set.all %}disabled{% endif %}" role="button">{% trans "Setup multifactor" %}</a>
-    {% if user.staticdevice_set.all or user.totpdevice_set.all %}
-    <a href="{% url 'two-factor-remove' %}" class="btn btn-primary" role="button">{% trans "Remove multifactor" %}</a>
-    {% endif %}
     </div>
 </div>
 
@@ -198,7 +194,7 @@
             <tr {% if object.session_key == session_key %}class="active"{% endif %}>
             <td>{{ object.ip }}</td>
             {% if object.user_agent or object.device %}
-            <td>{{ object.user_agent|device|default_if_none:unknown_on_unknown|safe }}</td>
+            <td>{{ object.user_agent|default_if_none:unknown_on_unknown|safe }}</td>
             {% else %}
             <td>{{ unknown_on_unknown }}</td>
             {% endif %}

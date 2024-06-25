@@ -4,9 +4,7 @@ In particular these views provide base functionality for rendering Django forms
 as JSON objects and passing them to modal forms (using jQuery / bootstrap).
 """
 
-from django.contrib.auth import password_validation
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.core.exceptions import ValidationError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -23,14 +21,13 @@ from allauth.account.views import EmailView, LoginView, PasswordResetFromKeyView
 from allauth.socialaccount.forms import DisconnectForm
 from allauth.socialaccount.views import ConnectionsView
 from djmoney.contrib.exchange.models import ExchangeBackend, Rate
-from user_sessions.views import SessionDeleteOtherView, SessionDeleteView
 
 import common.currency
 import common.models as common_models
 from part.models import PartCategory
 from users.models import RuleSet, check_user_role
 
-from .forms import EditUserForm, SetPasswordForm
+from .forms import EditUserForm
 from .helpers import is_ajax, remove_non_printable_characters, strip_html_tags
 
 
@@ -405,58 +402,6 @@ class EditUserView(AjaxUpdateView):
         return self.request.user
 
 
-class SetPasswordView(AjaxUpdateView):
-    """View for setting user password."""
-
-    ajax_template_name = 'InvenTree/password.html'
-    ajax_form_title = _('Set Password')
-    form_class = SetPasswordForm
-
-    def get_object(self):
-        """Set form to edit current user."""
-        return self.request.user
-
-    def post(self, request, *args, **kwargs):
-        """Validate inputs and change password."""
-        form = self.get_form()
-
-        valid = form.is_valid()
-
-        p1 = request.POST.get('enter_password', '')
-        p2 = request.POST.get('confirm_password', '')
-        old_password = request.POST.get('old_password', '')
-        user = self.request.user
-
-        if valid:
-            # Passwords must match
-
-            if p1 != p2:
-                error = _('Password fields must match')
-                form.add_error('enter_password', error)
-                form.add_error('confirm_password', error)
-                valid = False
-
-        if valid:
-            # Old password must be correct
-            if user.has_usable_password() and not user.check_password(old_password):
-                form.add_error('old_password', _('Wrong password provided'))
-                valid = False
-
-        if valid:
-            try:
-                # Validate password
-                password_validation.validate_password(p1, user)
-
-                # Update the user
-                user.set_password(p1)
-                user.save()
-            except ValidationError as error:
-                form.add_error('confirm_password', str(error))
-                valid = False
-
-        return self.renderJsonResponse(request, form, data={'form_valid': valid})
-
-
 class IndexView(TemplateView):
     """View for InvenTree index page."""
 
@@ -565,26 +510,6 @@ class CustomPasswordResetFromKeyView(PasswordResetFromKeyView):
     """Override of allauths PasswordResetFromKeyView to always show the settings but leave the functions allow."""
 
     success_url = reverse_lazy('account_login')
-
-
-class UserSessionOverride:
-    """Overrides sucessurl to lead to settings."""
-
-    def get_success_url(self):
-        """Revert to settings page after success."""
-        return str(reverse_lazy('settings'))
-
-
-class CustomSessionDeleteView(UserSessionOverride, SessionDeleteView):
-    """Revert to settings after session delete."""
-
-    pass
-
-
-class CustomSessionDeleteOtherView(UserSessionOverride, SessionDeleteOtherView):
-    """Revert to settings after session delete."""
-
-    pass
 
 
 class CustomLoginView(LoginView):

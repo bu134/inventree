@@ -1,7 +1,6 @@
 """Helper forms which subclass Django forms to provide additional functionality."""
 
 import logging
-from urllib.parse import urlencode
 
 from django import forms
 from django.conf import settings
@@ -12,15 +11,10 @@ from django.utils.translation import gettext_lazy as _
 
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.account.forms import LoginForm, SignupForm, set_form_field_order
-from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from allauth_2fa.adapter import OTPAdapter
-from allauth_2fa.utils import user_has_valid_totp_device
 from crispy_forms.bootstrap import AppendedText, PrependedAppendedText, PrependedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Field, Layout
-from dj_rest_auth.registration.serializers import RegisterSerializer
-from rest_framework import serializers
 
 import InvenTree.helpers_model
 import InvenTree.sso
@@ -292,9 +286,7 @@ class CustomUrlMixin:
         return InvenTree.helpers_model.construct_absolute_url(url)
 
 
-class CustomAccountAdapter(
-    CustomUrlMixin, RegistratonMixin, OTPAdapter, DefaultAccountAdapter
-):
+class CustomAccountAdapter(CustomUrlMixin, RegistratonMixin, DefaultAccountAdapter):
     """Override of adapter to use dynamic settings."""
 
     def send_mail(self, template_prefix, email, context):
@@ -332,29 +324,6 @@ class CustomSocialAccountAdapter(
             return super().is_auto_signup_allowed(request, sociallogin)
         return False
 
-    # from OTPAdapter
-    def has_2fa_enabled(self, user):
-        """Returns True if the user has 2FA configured."""
-        return user_has_valid_totp_device(user)
-
-    def login(self, request, user):
-        """Ensure user is send to 2FA before login if enabled."""
-        # Require two-factor authentication if it has been configured.
-        if self.has_2fa_enabled(user):
-            # Cast to string for the case when this is not a JSON serializable
-            # object, e.g. a UUID.
-            request.session['allauth_2fa_user_id'] = str(user.id)
-
-            redirect_url = reverse('two-factor-authenticate')
-            # Add GET parameters to the URL if they exist.
-            if request.GET:
-                redirect_url += '?' + urlencode(request.GET)
-
-            raise ImmediateHttpResponse(response=HttpResponseRedirect(redirect_url))
-
-        # Otherwise defer to the original allauth adapter.
-        return super().login(request, user)
-
     def authentication_error(
         self, request, provider_id, error=None, exception=None, extra_context=None
     ):
@@ -370,21 +339,3 @@ class CustomSocialAccountAdapter(
         # Log the error to the database
         log_error(path, error_name=error, error_data=exception)
         logger.error("SSO error for provider '%s' - check admin error log", provider_id)
-
-
-# override dj-rest-auth
-class CustomRegisterSerializer(RegisterSerializer):
-    """Override of serializer to use dynamic settings."""
-
-    email = serializers.EmailField()
-
-    def __init__(self, instance=None, data=..., **kwargs):
-        """Check settings to influence which fields are needed."""
-        kwargs['email_required'] = get_global_setting('LOGIN_MAIL_REQUIRED')
-        super().__init__(instance, data, **kwargs)
-
-    def save(self, request):
-        """Override to check if registration is open."""
-        if registration_enabled():
-            return super().save(request)
-        raise forms.ValidationError(_('Registration is disabled.'))
