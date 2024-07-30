@@ -302,6 +302,7 @@ def notify_users(
     sender,
     content: NotificationBody = InvenTreeNotificationBodies.NewOrder,
     exclude=None,
+    delta=None,
 ):
     """Notify all passed users or groups.
 
@@ -335,11 +336,16 @@ def notify_users(
     if content.template:
         context['template']['html'] = content.template.format(**content_context)
 
+    excluded = exclude
+    if not isinstance(exclude, list):
+        excluded = [exclude]
+
     # Create notification
     trigger_notification(
         instance,
         content.slug.format(**content_context),
         targets=users,
-        target_exclude=[exclude],
+        target_exclude=excluded,
         context=context,
+        delta=delta,
     )

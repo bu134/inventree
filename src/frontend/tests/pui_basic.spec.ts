@@ -6,7 +6,7 @@ test('PUI - Basic Login Test', async ({ page }) => {
   await doLogin(page);
 
   // Check that the username is provided
-  await page.getByText(user.username);
+  await page.getByText(user.username).isVisible();
 
   await expect(page).toHaveTitle(RegExp('^InvenTree'));
 
@@ -19,7 +19,7 @@ test('PUI - Basic Login Test', async ({ page }) => {
     .click();
 
   // Check that the username is provided
-  await page.getByText(user.username);
+  await page.getByText(user.username).isVisible();
 
   await expect(page).toHaveTitle(RegExp('^InvenTree'));
 
@@ -32,14 +32,14 @@ test('PUI - Basic Login Test', async ({ page }) => {
   await page.getByRole('menuitem', { name: 'Logout' }).click();
 
   await page.waitForURL('**/platform/login');
-  await page.getByLabel('username');
+  await page.getByLabel('username').isVisible();
 });
 
 test('PUI - Quick Login Test', async ({ page }) => {
   await doQuickLogin(page);
 
   // Check that the username is provided
-  await page.getByText(user.username);
+  await page.getByText(user.username).isVisible();
 
   await expect(page).toHaveTitle(RegExp('^InvenTree'));
 
@@ -54,5 +54,5 @@ test('PUI - Quick Login Test', async ({ page }) => {
   // Logout (via URL)
   await page.goto(`${baseUrl}/logout/`);
   await page.waitForURL('**/platform/login');
-  await page.getByLabel('username');
+  await page.getByLabel('username').isVisible();
 });
