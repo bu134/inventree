@@ -24,6 +24,7 @@
     inventreeLoad,
     inventreePut,
     inventreeSave,
+    hideFormInput,
     loadTableFilters,
     makeDeleteButton,
     makeEditButton,
@@ -41,6 +42,7 @@
     shortenString,
     showAlertDialog,
     showApiError,
+    showFormInput,
     showMessage,
     showModalSpinner,
     thumbnailImage,
@@ -190,9 +192,20 @@ function partFields(options={}) {
         },
         testable: {
             group: 'attributes',
+            onEdit: function(value, name, field, options) {
+                if (value) {
+                    showFormInput('complete_build_after_all_required_tests_passed', options);
+                } else {
+                    hideFormInput('complete_build_after_all_required_tests_passed', options);
+                }
+            }
         },
         trackable: {
             default: global_settings.PART_TRACKABLE,
+            group: 'attributes',
+        },
+        complete_build_after_all_required_tests_passed: {
+            default: false,
             group: 'attributes',
         },
         purchaseable: {
