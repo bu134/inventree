@@ -1,19 +1,12 @@
-import { Trans, t } from '@lingui/macro';
-import {
-  Divider,
-  Paper,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Text,
-  Title
-} from '@mantine/core';
+import { t } from '@lingui/macro';
+import { Divider, Skeleton, Stack } from '@mantine/core';
 import {
   IconCoins,
   IconCpu,
   IconDevicesPc,
   IconExclamationCircle,
   IconFileUpload,
+  IconHome,
   IconList,
   IconListDetails,
   IconPackages,
@@ -25,11 +18,12 @@ import {
   IconUsersGroup
 } from '@tabler/icons-react';
 import { lazy, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import PermissionDenied from '../../../../components/errors/PermissionDenied';
-import { PlaceholderPill } from '../../../../components/items/Placeholder';
 import { PanelGroup, PanelType } from '../../../../components/nav/PanelGroup';
 import { SettingsHeader } from '../../../../components/nav/SettingsHeader';
+import { QuickAction } from '../../../../components/settings/QuickAction';
 import { GlobalSettingList } from '../../../../components/settings/SettingList';
 import { Loadable } from '../../../../functions/loading';
 import { useUserState } from '../../../../states/UserState';
@@ -39,6 +33,8 @@ const ReportTemplatePanel = Loadable(
 );
 
 const LabelTemplatePanel = Loadable(lazy(() => import('./LabelTemplatePanel')));
+
+const HomePanel = Loadable(lazy(() => import('./HomePanel')));
 
 const UserManagementPanel = Loadable(
   lazy(() => import('./UserManagementPanel'))
@@ -92,9 +88,25 @@ const LocationTypesTable = Loadable(
 
 export default function AdminCenter() {
   const user = useUserState();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const panel = useMemo(() => {
+    return location.pathname.replace('/settings/admin/', '');
+  }, [location.pathname]);
+  const showQuickAction: boolean = useMemo(() => {
+    return panel !== 'home';
+  }, [panel]);
 
   const adminCenterPanels: PanelType[] = useMemo(() => {
     return [
+      {
+        name: 'home',
+        label: t`Home`,
+        icon: <IconHome />,
+        content: <HomePanel />,
+        showHeadline: false
+      },
       {
         name: 'user',
         label: t`Users`,
@@ -194,29 +206,6 @@ export default function AdminCenter() {
     ];
   }, []);
 
-  const QuickAction = () => (
-    <Stack gap={'xs'} ml={'sm'}>
-      <Title order={5}>
-        <Trans>Quick Actions</Trans>
-      </Title>
-      <SimpleGrid cols={3}>
-        <Paper shadow="xs" p="sm" withBorder>
-          <Text>
-            <Trans>Add a new user</Trans>
-          </Text>
-        </Paper>
-
-        <Paper shadow="xs" p="sm" withBorder>
-          <PlaceholderPill />
-        </Paper>
-
-        <Paper shadow="xs" p="sm" withBorder>
-          <PlaceholderPill />
-        </Paper>
-      </SimpleGrid>
-    </Stack>
-  );
-
   if (!user.isLoggedIn()) {
     return <Skeleton />;
   }
@@ -231,11 +220,12 @@ export default function AdminCenter() {
             switch_link="/settings/system"
             switch_text="System Settings"
           />
-          <QuickAction />
+          {showQuickAction ? <QuickAction navigate={navigate} /> : null}
           <PanelGroup
             pageKey="admin-center"
             panels={adminCenterPanels}
             collapsible={true}
+            ml={'sm'}
           />
         </Stack>
       ) : (
