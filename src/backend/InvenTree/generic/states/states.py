@@ -103,9 +103,24 @@ class StatusCode(BaseEnum):
         return isinstance(value.value, int)
 
     @classmethod
-    def values(cls, key=None):
+    def custom_values(cls):
+        """Return all user-defined custom values for this status class."""
+        from common.models import InvenTreeCustomUserStateModel
+
+        try:
+            return list(
+                InvenTreeCustomUserStateModel.objects.filter(
+                    reference_status=cls.__name__
+                )
+            )
+        except Exception:
+            return []
+
+    @classmethod
+    def values(cls, key=None, custom=True):
         """Return a dict representation containing all required information."""
         elements = [itm for itm in cls if cls._is_element(itm.name)]
+
         if key is None:
             return elements
 
@@ -174,23 +189,41 @@ class StatusCode(BaseEnum):
         return filtered.label
 
     @classmethod
-    def dict(cls, key=None):
+    def dict(cls, key=None, custom=None):
         """Return a dict representation containing all required information."""
-        return {
+        data = {
             x.name: {'color': x.color, 'key': x.value, 'label': x.label, 'name': x.name}
             for x in cls.values(key)
         }
 
-    @classmethod
-    def list(cls):
-        """Return the StatusCode options as a list of mapped key / value items."""
-        return list(cls.dict().values())
+        if custom:
+            try:
+                for item in cls.custom_values():
+                    if item.name not in data:
+                        data[item.name] = {
+                            'color': item.color,
+                            'key': item.key,
+                            'label': item.label,
+                            'name': item.name,
+                        }
+            except Exception:
+                pass
+
+        return data
 
     @classmethod
-    def template_context(cls):
+    def list(cls, custom=True):
+        """Return the StatusCode options as a list of mapped key / value items."""
+        return list(cls.dict(custom=custom).values())
+
+    @classmethod
+    def template_context(cls, custom=True):
         """Return a dict representation containing all required information for templates."""
-        ret = {x.name: x.value for x in cls.values()}
-        ret['list'] = cls.list()
+        data = cls.dict(custom=custom)
+
+        ret = {x['name']: x['key'] for x in data.values()}
+
+        ret['list'] = list(data.values())
 
         return ret
 
